@@ -10,13 +10,16 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
+from flask_jwt_extended import JWTManager, create_access_token 
 from models import db, User
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_CONNECTION_STRING')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["JWT_SECRET_KEY"] = os.environ.get('FLASK_APP_KEY')
 MIGRATE = Migrate(app, db)
+jwt = JWTManager(app)
 db.init_app(app)
 CORS(app)
 setup_admin(app)
@@ -40,6 +43,7 @@ def handle_hello():
 
     return jsonify(response_body), 200
 
+# Sign_up route
 @app.route('/signup', methods = ['POST'])
 def sign_up():
     body = request.json
@@ -83,6 +87,32 @@ def sign_up():
             "msg":"Something Happened"
         }), 400
 
+
+#Log_in route
+@app.route('/login', methods=['POST'])
+def handle_login():
+    
+    email = request.json.get("email", None)
+    password = request.json.get("password", None)
+
+    if email is not None and password is not None:
+        user = User.query.filter_by(email=email, password=password).one_or_none()
+
+        if user is not None:
+            create_token = create_access_token(identity = user.id)
+            return jsonify({
+                "email": user.email,
+                "token": create_token,
+                "user_id": user.id
+            }), 200
+        else:
+            return jsonify({
+                "msg": "User not found"
+            }), 404
+    else:
+        return jsonify({
+            "msg": "Something is wrong, try again"
+        }), 400
 
 
 # this only runs if `$ python src/main.py` is executed
