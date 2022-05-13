@@ -10,7 +10,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from flask_jwt_extended import JWTManager, create_access_token 
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from models import db, User
 
 app = Flask(__name__)
@@ -113,6 +113,51 @@ def handle_login():
         return jsonify({
             "msg": "Something is wrong, try again"
         }), 400
+
+
+# Users profile
+@app.route('/user/<int:user_id>', methods=['GET', 'PUT'])
+@jwt_required()
+def handle_user(user_id = None):
+
+    user_id = get_jwt_identity()
+
+    if request.method == 'GET':
+
+        if user_id is None:
+            return jsonify({
+                "msg": "User not found"
+            }), 404
+        else:
+            user = User.query.filter_by(id = user_id).first()
+            if user is not None:
+                return jsonify(user.serialize()), 200
+            else:
+                return jsonify({
+                "msg": "User not found"
+            }), 404
+
+    if request.method == 'PUT':
+
+        body = request.json
+
+        user_update = User.query.filter_by(id = user_id).first()
+
+        if user_update is None:
+            return jsonify({
+                "msg": "User not found"
+            }), 404
+        
+        try:
+            user_update.email = body["email"]
+            user_update.first_name = body["first_name"]
+            user_update.last_name = body["last_name"]
+            user_update.username = body["username"]
+            db.session.commit()
+            return jsonify(user_update.serialize()), 202
+        except Exception as error:
+            db.session.rollback()
+            return jsonify(error.args)
 
 
 # this only runs if `$ python src/main.py` is executed
