@@ -12,17 +12,20 @@ from utils import APIException, generate_sitemap
 from admin import setup_admin
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from models import db, User
+from flask_socketio import SocketIO, send
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_CONNECTION_STRING')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = os.environ.get('FLASK_APP_KEY')
+socketIo = SocketIO(app, cors_allowed_origins="*")
 MIGRATE = Migrate(app, db)
 jwt = JWTManager(app)
 db.init_app(app)
 CORS(app)
 setup_admin(app)
+
 
 # Handle/serialize errors like a JSON object
 @app.errorhandler(APIException)
@@ -159,6 +162,11 @@ def handle_user(user_id = None):
             db.session.rollback()
             return jsonify(error.args)
 
+@socketIo.on("message")
+def handleMessage(msg):
+    print(msg)
+    send(msg, broadcast=True)
+    return None
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
