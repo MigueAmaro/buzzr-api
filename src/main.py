@@ -2,6 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 
+from email import message
 from hashlib import new
 import os
 from socket import socket
@@ -12,7 +13,7 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from models import db, User
+from models import db, User, Messages
 from flask_socketio import SocketIO, send
 
 app = Flask(__name__)
@@ -168,7 +169,17 @@ def handleMessage(msg):
     user_id = request.args.get("user")
     user = User.query.filter_by(id = user_id).first()
     if user is not None:
-        send(msg, broadcast=True)
+        try:
+            mensaje = Messages (
+            msg = msg,
+            username = user.username
+        )
+            db.session.add(mensaje)
+            db.session.commit()
+            send(msg, broadcast=True)
+        except Exception as error:
+            db.session.rollback()
+            return jsonify(error)
     return None
 
 # this only runs if `$ python src/main.py` is executed

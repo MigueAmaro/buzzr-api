@@ -58,3 +58,9 @@ class Channels(db.Model):
             "name": self.name,
             "server": self.server_id
         }
+
+class Messages(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+
+    msg = db.Column(db.Text, nullable = False)
+    username = db.Column(db.String(50))
