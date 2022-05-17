@@ -4,6 +4,7 @@ This module takes care of starting the API Server, Loading the DB and Adding the
 
 from hashlib import new
 import os
+from socket import socket
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
 from flask_swagger import swagger
@@ -164,8 +165,10 @@ def handle_user(user_id = None):
 
 @socketIo.on("message")
 def handleMessage(msg):
-    print(msg)
-    send(msg, broadcast=True)
+    user_id = request.args.get("user")
+    user = User.query.filter_by(id = user_id).first()
+    if user is not None:
+        send(msg, broadcast=True)
     return None
 
 # this only runs if `$ python src/main.py` is executed
