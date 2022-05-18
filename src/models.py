@@ -64,3 +64,13 @@ class Messages(db.Model):
 
     msg = db.Column(db.Text, nullable = False)
     username = db.Column(db.String(50))
+    
+    def __repr__(self):
+        return '<Msg %r>' % self.msg
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "msg": self.msg,
+            "username": self.username
+        }

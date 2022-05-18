@@ -182,6 +182,23 @@ def handleMessage(msg):
             return jsonify(error)
     return None
 
+@app.route('/messages', methods=['GET'])
+@jwt_required()
+def get_messages():
+
+    if request.method == 'GET':
+        messages = Messages.query.all()
+        messages = list(map(
+            lambda message : message.serialize(),
+            messages
+        ))
+        return jsonify(messages),200
+    else:
+        return jsonify({
+            "msg": "Not found messages in this chat room"
+        }), 404 
+
+
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', 5000))
