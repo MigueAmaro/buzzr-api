@@ -5,6 +5,7 @@ This module takes care of starting the API Server, Loading the DB and Adding the
 from email import message
 from hashlib import new
 import os
+import re
 from socket import socket
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
@@ -14,7 +15,7 @@ from utils import APIException, generate_sitemap
 from admin import setup_admin
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from models import db, User, Messages
-from flask_socketio import SocketIO, send
+from flask_socketio import SocketIO, send, emit
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
@@ -108,6 +109,7 @@ def handle_login():
             return jsonify({
                 "email": user.email,
                 "token": create_token,
+                'username':user.username,
                 "user_id": user.id
             }), 200
         else:
@@ -181,6 +183,20 @@ def handleMessage(msg):
             db.session.rollback()
             return jsonify(error)
     return None
+
+user = {}
+
+@socketIo.on('login')
+def assing_sid(username):
+    user[username] = request.sid
+
+@socketIo.on("private_message")
+def handle_private(payload):
+    recipient = user[payload['username']]
+    msg = payload['msg']
+    print(request.sid)
+    emit('new_private_msg', msg, room = recipient)
+
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
