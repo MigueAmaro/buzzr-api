@@ -23,7 +23,7 @@ app.url_map.strict_slashes = False
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_CONNECTION_STRING')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = os.environ.get('FLASK_APP_KEY')
-socketIo = SocketIO(app, cors_allowed_origins="*")
+socketIo = SocketIO(app, cors_allowed_origins="*", logger=True)
 MIGRATE = Migrate(app, db)
 jwt = JWTManager(app)
 db.init_app(app)
@@ -200,7 +200,8 @@ def handle_connect(id):
         return print("NO EXISTE")
     else:
         print("HOLAAAAA",user_id)
-        join_room(user_id)
+        user[id] = request.sid
+        print(user)
 
 
 # @socketIo.on('disconnect')
@@ -211,12 +212,12 @@ def handle_connect(id):
 
 @socketIo.on("private_message")
 def handle_private(payload):
-    user = User.query.filter_by(username = payload["username"]).first()
-    if user is not None:
-        user = user.id
+    user1 = User.query.filter_by(username = payload["username"]).first()
+    if user1 is not None:
+        users = user['1']
     msg = payload['msg']
     print(msg)
-    emit("new_private_msg", msg, room = user, broadcast = True)
+    emit("new_private_msg", msg, room = users)
 
 
 # this only runs if `$ python src/main.py` is executed
