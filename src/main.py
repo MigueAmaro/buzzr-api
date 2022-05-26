@@ -2,8 +2,10 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 
+from email import message
 from hashlib import new
 import os
+from socket import socket
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
 from flask_swagger import swagger
@@ -11,7 +13,7 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from models import db, User
+from models import db, User, Messages
 from flask_socketio import SocketIO, send
 
 app = Flask(__name__)
@@ -164,9 +166,38 @@ def handle_user(user_id = None):
 
 @socketIo.on("message")
 def handleMessage(msg):
-    print(msg)
-    send(msg, broadcast=True)
+    user_id = request.args.get("user")
+    user = User.query.filter_by(id = user_id).first()
+    if user is not None:
+        try:
+            mensaje = Messages (
+            msg = msg,
+            username = user.username
+        )
+            db.session.add(mensaje)
+            db.session.commit()
+            send(msg, broadcast=True)
+        except Exception as error:
+            db.session.rollback()
+            return jsonify(error)
     return None
+
+@app.route('/messages', methods=['GET'])
+@jwt_required()
+def get_messages():
+
+    if request.method == 'GET':
+        messages = Messages.query.all()
+        messages = list(map(
+            lambda message : message.serialize(),
+            messages
+        ))
+        return jsonify(messages),200
+    else:
+        return jsonify({
+            "msg": "Not found messages in this chat room"
+        }), 404 
+
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
