@@ -216,7 +216,7 @@ def handle_private(payload):
         user = user.id
     msg = payload['msg']
     print(msg)
-    emit("new_private_msg", msg, room = user, to = user, broadcast = True)
+    emit("new_private_msg", msg, room = user, broadcast = True)
 
 
 # this only runs if `$ python src/main.py` is executed
