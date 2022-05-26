@@ -214,10 +214,19 @@ def handle_connect(id):
 def handle_private(payload):
     user1 = User.query.filter_by(username = payload["username"]).first()
     if user1 is not None:
-        users = user['1']
+        user1 = user1.serialize()
+        print(user1['id'])
+
+        variable = str(user1['id'])
+
+        print(user[variable])
+        # print(user)
+        # print(user.user1.id)
+        user2 = user[variable]
+    print(user)
     msg = payload['msg']
     print(msg)
-    emit("new_private_msg", msg, room = users)
+    emit("new_private_msg", msg, room = user2)
 
 
 # this only runs if `$ python src/main.py` is executed
