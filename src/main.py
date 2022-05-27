@@ -15,6 +15,7 @@ from admin import setup_admin
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from models import db, User, Messages
 from flask_socketio import SocketIO, send
+import datetime
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
@@ -172,7 +173,8 @@ def handleMessage(msg):
         try:
             mensaje = Messages (
             msg = msg,
-            username = user.username
+            username = user.username,
+            date = datetime.datetime.now()
         )
             db.session.add(mensaje)
             db.session.commit()
