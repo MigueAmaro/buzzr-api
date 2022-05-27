@@ -3,8 +3,10 @@ This module takes care of starting the API Server, Loading the DB and Adding the
 """
 
 from email import message
+from email.policy import default
 from hashlib import new
 import os
+import re
 from socket import socket
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
@@ -14,6 +16,7 @@ from utils import APIException, generate_sitemap
 from admin import setup_admin
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from models import db, User, Messages
+from flask_socketio import SocketIO, send, emit, join_room, close_room
 from flask_socketio import SocketIO, send
 import datetime
 
@@ -22,7 +25,7 @@ app.url_map.strict_slashes = False
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_CONNECTION_STRING')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = os.environ.get('FLASK_APP_KEY')
-socketIo = SocketIO(app, cors_allowed_origins="*")
+socketIo = SocketIO(app, cors_allowed_origins="*", logger=True)
 MIGRATE = Migrate(app, db)
 jwt = JWTManager(app)
 db.init_app(app)
@@ -109,6 +112,7 @@ def handle_login():
             return jsonify({
                 "email": user.email,
                 "token": create_token,
+                'username':user.username,
                 "user_id": user.id
             }), 200
         else:
@@ -164,6 +168,67 @@ def handle_user(user_id = None):
         except Exception as error:
             db.session.rollback()
             return jsonify(error.args)
+
+# @socketIo.on("message")
+# def handleMessage(msg):
+#     user_id = request.args.get("user")
+#     user = User.query.filter_by(id = user_id).first()
+#     if user is not None:
+#         try:
+#             mensaje = Messages (
+#             msg = msg,
+#             username = user.username
+#         )
+#             db.session.add(mensaje)
+#             db.session.commit()
+#             send(msg, broadcast=True)
+#         except Exception as error:
+#             db.session.rollback()
+#             return jsonify(error)
+#     return None
+
+user = {}
+
+# @socketIo.on('login')
+# def assing_sid(username):
+#     user[username] = request.sid
+#     print(user)
+
+@socketIo.on('login')
+def handle_connect(id):
+    user_id = id
+
+    if user_id is None:
+        return print("NO EXISTE")
+    else:
+        print("HOLAAAAA",user_id)
+        user[id] = request.sid
+        print(user)
+
+
+# @socketIo.on('disconnect')
+# @jwt_required()
+# def handle_disconnect():
+#     user_id = get_jwt_identity()
+#     close_room(user_id)
+
+@socketIo.on("private_message")
+def handle_private(payload):
+    user1 = User.query.filter_by(username = payload["username"]).first()
+    if user1 is not None:
+        user1 = user1.serialize()
+        print(user1['id'])
+
+        variable = str(user1['id'])
+
+        print(user[variable])
+        # print(user)
+        # print(user.user1.id)
+        user2 = user[variable]
+    print(user)
+    msg = payload['msg']
+    print(msg)
+    emit("new_private_msg", msg, room = user2)
 
 @socketIo.on("message")
 def handleMessage(msg):
