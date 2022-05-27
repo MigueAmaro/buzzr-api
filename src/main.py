@@ -17,6 +17,8 @@ from admin import setup_admin
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from models import db, User, Messages
 from flask_socketio import SocketIO, send, emit, join_room, close_room
+from flask_socketio import SocketIO, send
+import datetime
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
@@ -227,6 +229,41 @@ def handle_private(payload):
     msg = payload['msg']
     print(msg)
     emit("new_private_msg", msg, room = user2)
+
+@socketIo.on("message")
+def handleMessage(msg):
+    user_id = request.args.get("user")
+    user = User.query.filter_by(id = user_id).first()
+    if user is not None:
+        try:
+            mensaje = Messages (
+            msg = msg,
+            username = user.username,
+            date = datetime.datetime.now()
+        )
+            db.session.add(mensaje)
+            db.session.commit()
+            send(msg, broadcast=True)
+        except Exception as error:
+            db.session.rollback()
+            return jsonify(error)
+    return None
+
+@app.route('/messages', methods=['GET'])
+@jwt_required()
+def get_messages():
+
+    if request.method == 'GET':
+        messages = Messages.query.all()
+        messages = list(map(
+            lambda message : message.serialize(),
+            messages
+        ))
+        return jsonify(messages),200
+    else:
+        return jsonify({
+            "msg": "Not found messages in this chat room"
+        }), 404 
 
 
 # this only runs if `$ python src/main.py` is executed
