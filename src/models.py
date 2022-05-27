@@ -64,6 +64,7 @@ class Messages(db.Model):
 
     msg = db.Column(db.Text, nullable = False)
     username = db.Column(db.String(50))
+    date = db.Column(db.DateTime, nullable=False)
     
     def __repr__(self):
         return '<Msg %r>' % self.msg
@@ -72,5 +73,6 @@ class Messages(db.Model):
         return {
             "id": self.id,
             "msg": self.msg,
-            "username": self.username
+            "username": self.username,
+            "date": self.date
         }
