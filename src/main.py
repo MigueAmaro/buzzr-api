@@ -229,17 +229,19 @@ def handle_private(payload):
         user_to = user_to.serialize()
         user_from = user_from.serialize()
 
-        user_to = str(user_to['id'])
-        user_from = str(user_from['id'])
+        user_to_id = str(user_to['id'])
+        user_from_id = str(user_from['id'])
 
-        user2 = user[user_to]
+        user2 = user[user_to_id]
         msg = payload['msg']
 
         try:
             private_message = PrivateMessages (
                 msg = msg,
-                user_to = user_to,
-                user_from = user_from,
+                user_to = user_to_id,
+                username_to = user_to['username'],
+                user_from = user_from_id,
+                username_from = user_from['username'],
                 date = datetime.datetime.now()
             )
             db.session.add(private_message)

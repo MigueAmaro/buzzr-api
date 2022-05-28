@@ -82,7 +82,9 @@ class PrivateMessages(db.Model):
 
     msg = db.Column(db.Text, nullable = False)
     user_from = db.Column(db.String(1000), nullable=False)
+    username_from = db.Column(db.String(80), nullable=False)
     user_to = db.Column(db.String(1000), nullable=False)
+    username_to = db.Column(db.String(80), nullable=False)
     date = db.Column(db.DateTime, nullable=False)
     
     def __repr__(self):
@@ -93,6 +95,8 @@ class PrivateMessages(db.Model):
             "id": self.id,
             "msg": self.msg,
             "user_from": self.user_from,
+            "username_from": self.username_from,
             "user_to": self.user_to,
+            "username_to": self.username_from,
             "date": self.date
         }
