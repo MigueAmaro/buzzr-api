@@ -76,3 +76,23 @@ class Messages(db.Model):
             "username": self.username,
             "date": self.date
         }
+
+class PrivateMessages(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+
+    msg = db.Column(db.Text, nullable = False)
+    user_from = db.Column(db.String(1000), nullable=False)
+    user_to = db.Column(db.String(1000), nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
+    
+    def __repr__(self):
+        return '<Msg %r>' % self.msg
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "msg": self.msg,
+            "user_from": self.user_from,
+            "user_to": self.user_to,
+            "date": self.date
+        }

@@ -15,7 +15,7 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from models import db, User, Messages
+from models import db, User, Messages, PrivateMessages
 from flask_socketio import SocketIO, send, emit, join_room, close_room
 from flask_socketio import SocketIO, send
 import datetime
@@ -43,14 +43,6 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/user', methods=['GET'])
-def handle_hello():
-
-    response_body = {
-        "msg": "Hello, this is your GET /user response "
-    }
-
-    return jsonify(response_body), 200
 
 # Sign_up route
 @app.route('/signup', methods = ['POST'])
@@ -126,6 +118,24 @@ def handle_login():
 
 
 # Users profile
+@app.route('/user', methods=['GET'])
+@jwt_required()
+def handle_all_users():
+
+    users = User.query.all()
+    if users is not None:
+        users = list(map(
+            lambda user : user.serialize(),
+            users
+        ))
+        return jsonify(users), 200
+    else:
+        return jsonify({
+            "msg": "Users not found"
+        }), 404
+
+
+
 @app.route('/user/<int:user_id>', methods=['GET', 'PUT'])
 @jwt_required()
 def handle_user(user_id = None):
@@ -157,7 +167,7 @@ def handle_user(user_id = None):
             return jsonify({
                 "msg": "User not found"
             }), 404
-        
+            
         try:
             user_update.email = body["email"]
             user_update.first_name = body["first_name"]
@@ -201,9 +211,7 @@ def handle_connect(id):
     if user_id is None:
         return print("NO EXISTE")
     else:
-        print("HOLAAAAA",user_id)
         user[id] = request.sid
-        print(user)
 
 
 # @socketIo.on('disconnect')
@@ -214,21 +222,34 @@ def handle_connect(id):
 
 @socketIo.on("private_message")
 def handle_private(payload):
-    user1 = User.query.filter_by(username = payload["username"]).first()
-    if user1 is not None:
-        user1 = user1.serialize()
-        print(user1['id'])
+    user_to = User.query.filter_by(username = payload["username"]).first()
+    user_from = User.query.filter_by(id = payload['id']).first()
 
-        variable = str(user1['id'])
+    if user_to is not None and user_from is not None:
+        user_to = user_to.serialize()
+        user_from = user_from.serialize()
 
-        print(user[variable])
-        # print(user)
-        # print(user.user1.id)
-        user2 = user[variable]
-    print(user)
-    msg = payload['msg']
-    print(msg)
-    emit("new_private_msg", msg, room = user2)
+        user_to = str(user_to['id'])
+        user_from = str(user_from['id'])
+
+        user2 = user[user_to]
+        msg = payload['msg']
+
+        try:
+            private_message = PrivateMessages (
+                msg = msg,
+                user_to = user_to,
+                user_from = user_from,
+                date = datetime.datetime.now()
+            )
+            db.session.add(private_message)
+            db.session.commit()
+            emit("new_private_msg", msg, room = user2)
+        except Exception as error:
+            db.session.rollback()
+            return jsonify(error)
+    else:
+        return None
 
 @socketIo.on("message")
 def handleMessage(msg):
@@ -265,6 +286,27 @@ def get_messages():
             "msg": "Not found messages in this chat room"
         }), 404 
 
+
+@app.route('/private/<int:user_to>', methods=['GET'])
+@jwt_required()
+def get_private_messages(user_to = None):
+
+    user_id = get_jwt_identity()
+
+    if request.method == 'GET':
+        if user_to is not None:
+            
+            messages = PrivateMessages.query.filter_by(user_from = user_id, user_to = user_to).all()
+            messages = list(map(
+                lambda message : message.serialize(),
+                messages
+            ))
+            print(messages)
+            return jsonify(messages)
+        else:
+            return jsonify({
+                "msg": "U dont have messages here"
+            }), 404
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
