@@ -2,12 +2,17 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 
+
+from ctypes.wintypes import HLOCAL
 from email import message
 from email.policy import default
 from hashlib import new
+from logging import root
 import os
 import re
 from socket import socket
+
+
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
 from flask_swagger import swagger
@@ -15,8 +20,8 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from models import db, User, Messages, PrivateMessages
-from flask_socketio import SocketIO, send, emit, join_room, close_room
+from models import Channels, db, User, Messages, PrivateMessages
+from flask_socketio import SocketIO, send, emit, join_room, leave_room
 from flask_socketio import SocketIO, send
 import datetime
 
@@ -309,6 +314,42 @@ def get_private_messages(user_to = None):
             return jsonify({
                 "msg": "U dont have messages here"
             }), 404
+
+@socketIo.on("create_channel")
+def handle_channel(payload):
+    user = payload["id"]
+    room = payload["name"]
+    try:
+        channel = Channels(
+            name = room,
+            user_id = user
+        )
+        db.session.add(channel)
+        db.session.commit()
+        join_room(room)
+        return send(user + "has entered the room", to = room)
+    except Exception as error:
+        db.session.rollback()
+        return jsonify(error)
+
+@socketIo.on("channel_chat")
+def handle_chat(payload):
+    msg = payload["msg"]
+    room = payload["channel"]
+    emit("get_channel_chat", msg, to = room, broadcast = True)
+
+@app.route('/channels', methods = ['GET'])
+@jwt_required()
+def handle_channels():
+    user = get_jwt_identity()
+    user_channels = Channels.query.filter_by(user_id = user).all()
+    if user_channels is not None:
+        user_channels = list(map(lambda channels : channels.serialize(), user_channels))
+        return jsonify(user_channels)
+    else: 
+        return jsonify(
+            {"msg": "channel not found"}
+    ), 404
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':

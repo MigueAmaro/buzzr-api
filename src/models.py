@@ -45,9 +45,8 @@ class Channels(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     
     name = db.Column(db.String(80), nullable = False)
+    user_id = db.Column(db.Integer, nullable = False)
 
-    server = db.relationship("Server")
-    server_id = db.Column(db.Integer, db.ForeignKey("server.id"))
 
     def __repr__(self):
         return '<Channel %r>' % self.name
@@ -56,7 +55,6 @@ class Channels(db.Model):
         return {
             "id": self.id,
             "name": self.name,
-            "server": self.server_id
         }
 
 class Messages(db.Model):
@@ -65,6 +63,8 @@ class Messages(db.Model):
     msg = db.Column(db.Text, nullable = False)
     username = db.Column(db.String(50))
     date = db.Column(db.DateTime, nullable=False)
+    channel = db.relationship("Channels")
+    channel_id = db.Column(db.Integer, db.ForeignKey("channels.id"))
     
     def __repr__(self):
         return '<Msg %r>' % self.msg
