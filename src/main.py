@@ -332,6 +332,10 @@ def handle_channel(payload):
         db.session.rollback()
         return jsonify(error)
 
+@socketIo.on("join")
+def handle_join(channel):
+    join_room(channel)
+
 @socketIo.on("channel_chat")
 def handle_chat(payload):
     msg = payload["msg"]
