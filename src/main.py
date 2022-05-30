@@ -297,13 +297,20 @@ def get_private_messages(user_to = None):
 
     if request.method == 'GET':
         if user_to is not None:
-            
-            messages = PrivateMessages.query.filter_by(user_from = user_id, user_to = user_to).all()
-            messages = list(map(
-                lambda message : message.serialize(),
-                messages
+            messages = []
+
+            messages_from = PrivateMessages.query.filter_by(user_from = user_id, user_to = user_to).all()
+            messages_to = PrivateMessages.query.filter_by(user_from = user_to, user_to = user_id).all()
+
+            messages_from = list(map(
+                lambda msg : messages.append(msg.serialize()),
+                messages_from
             ))
-            print(messages)
+            messages_to = list(map(
+                lambda msg : messages.append(msg.serialize()),
+                messages_to
+            ))
+
             return jsonify(messages)
         else:
             return jsonify({
