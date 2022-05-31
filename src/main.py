@@ -259,24 +259,24 @@ def handle_private(payload):
     else:
         return None
 
-@socketIo.on("message")
-def handleMessage(msg):
-    user_id = request.args.get("user")
-    user = User.query.filter_by(id = user_id).first()
-    if user is not None:
-        try:
-            mensaje = Messages (
-            msg = msg,
-            username = user.username,
-            date = datetime.datetime.now()
-        )
-            db.session.add(mensaje)
-            db.session.commit()
-            send(msg, broadcast=True)
-        except Exception as error:
-            db.session.rollback()
-            return jsonify(error)
-    return None
+# @socketIo.on("message")
+# def handleMessage(msg):
+#     user_id = request.args.get("user")
+#     user = User.query.filter_by(id = user_id).first()
+#     if user is not None:
+#         try:
+#             mensaje = Messages (
+#             msg = msg,
+#             username = user.username,
+#             date = datetime.datetime.now()
+#         )
+#             db.session.add(mensaje)
+#             db.session.commit()
+#             send(msg, broadcast=True)
+#         except Exception as error:
+#             db.session.rollback()
+#             return jsonify(error)
+#     return None
 
 @app.route('/messages', methods=['GET'])
 @jwt_required()
@@ -353,9 +353,8 @@ def handle_channel():
         return jsonify(error), 500
 
 @socketIo.on("join")
-def handle_join(channel):
-    user = request.sid
-    join_room(user)
+def on_join(channel):
+    join_room(f"holachannel")
 
 @socketIo.on("channel")
 def handle_chat(payload):
@@ -378,5 +377,5 @@ def handle_channels():
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
-    PORT = int(os.environ.get('PORT', 5000))
+    PORT = int(os.environ.get('PORT', 5500))
     app.run(host='0.0.0.0', port=PORT, debug=False)
