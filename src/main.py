@@ -3,6 +3,7 @@ This module takes care of starting the API Server, Loading the DB and Adding the
 """
 
 
+
 from ctypes.wintypes import HLOCAL
 from email import message
 from email.policy import default
@@ -315,10 +316,28 @@ def get_private_messages(user_to = None):
                 "msg": "U dont have messages here"
             }), 404
 
-@socketIo.on("create_channel")
-def handle_channel(payload):
-    user = payload["id"]
-    room = payload["name"]
+# @socketIo.on("create_channel")
+# def handle_channel(payload):
+#     user = payload["id"]
+#     room = payload["name"]
+#     try:
+#         channel = Channels(
+#             name = room,
+#             user_id = user
+#         )
+#         db.session.add(channel)
+#         db.session.commit()
+#         # join_room(room)
+#         return emit(user + "has entered the room", to = room)
+#     except Exception as error:
+#         db.session.rollback()
+#         return jsonify(error)
+
+@app.route('/createchannel', methods = ['POST'])
+@jwt_required()
+def handle_channel():
+    user = get_jwt_identity()
+    room = request.json.get("channel")
     try:
         channel = Channels(
             name = room,
@@ -326,15 +345,17 @@ def handle_channel(payload):
         )
         db.session.add(channel)
         db.session.commit()
-        # join_room(room)
-        return emit(user + "has entered the room", to = room)
+        return jsonify({
+            "msg": "channel created"
+        }), 201
     except Exception as error:
         db.session.rollback()
-        return jsonify(error)
+        return jsonify(error), 500
 
-# @socketIo.on("join")
-# def handle_join(channel):
-#     join_room(channel)
+@socketIo.on("join")
+def handle_join(channel):
+    user = request.sid
+    join_room(user)
 
 @socketIo.on("channel")
 def handle_chat(payload):
