@@ -326,21 +326,21 @@ def handle_channel(payload):
         )
         db.session.add(channel)
         db.session.commit()
-        join_room(room)
-        return send(user + "has entered the room", to = room)
+        # join_room(room)
+        return emit(user + "has entered the room", to = room)
     except Exception as error:
         db.session.rollback()
         return jsonify(error)
 
-@socketIo.on("join")
-def handle_join(channel):
-    join_room(channel)
+# @socketIo.on("join")
+# def handle_join(channel):
+#     join_room(channel)
 
-@socketIo.on("channel_chat")
+@socketIo.on("channel")
 def handle_chat(payload):
     msg = payload["msg"]
     room = payload["channel"]
-    emit("get_channel_chat", msg, to = room, broadcast = True)
+    emit("mensaje", msg, room = room, broadcast = True)
 
 @app.route('/channels', methods = ['GET'])
 @jwt_required()
