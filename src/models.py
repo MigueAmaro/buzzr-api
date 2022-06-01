@@ -100,3 +100,20 @@ class PrivateMessages(db.Model):
             "username_to": self.username_from,
             "date": self.date
         }
+
+class ToDo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    task = db.Column(db.String(100), nullable=False)
+    user = db.relationship('User')
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    def __repr__(self):
+        return '<ToDo %r>'
+
+    def serialize(self):
+        return {
+            'id': self.id,
+            'task': self.task,
+            'user_id': self.user_id
+        }

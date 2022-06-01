@@ -23,7 +23,7 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from models import Channels, db, User, Messages, PrivateMessages
+from models import Channels, db, User, Messages, PrivateMessages, ToDo
 from flask_socketio import SocketIO, send, emit, join_room, leave_room
 from flask_socketio import SocketIO, send
 import datetime
@@ -392,6 +392,7 @@ def handle_channels():
             {"msg": "channel not found"}
     ), 404
 
+<<<<<<< HEAD
 @app.route('/messages/<string:channelname>', methods = ['GET'])
 @jwt_required()
 def handle_messages(channelname):
@@ -408,6 +409,78 @@ def handle_messages(channelname):
         return jsonify({
             "msg":"Not found"
         }), 404
+=======
+
+@app.route('/todos', methods=['GET'])
+@app.route('/todos/<int:user_id>', methods=['GET', 'POST'])
+def handle_todos(user_id = None):
+
+    if user_id is None:
+        return jsonify({"msg": "User not found, try again"}), 404
+
+    if request.method == 'GET':
+        tasks = ToDo.query.filter_by(user_id = user_id).all()
+        tasks = list(map(
+            lambda task : task.serialize(),
+            tasks
+        ))
+        return jsonify(tasks), 200
+
+    if request.method == 'POST':
+        body = request.json
+
+        if not body.get("task"):
+            return jsonify({"msg": "Something is wrong, try again"}), 400
+            
+        task = ToDo(
+            task = body["task"],
+            user_id = user_id
+        )
+        try:
+            db.session.add(task)
+            db.session.commit()
+            return jsonify(task.serialize()), 201
+        except Exception as error:
+            db.session.rollback()
+            return jsonify({error.args}), 500
+
+@app.route('/todos/<int:user_id>/<int:task_id>', methods=['PUT', 'DELETE'])
+def edit_tasks(user_id = None, task_id = None):
+    
+    if user_id is None:
+        return jsonify({"msg": "User not found, try again"}), 404
+
+    if request.method == 'PUT':
+        body = request.json
+
+        task_update = ToDo.query.filter_by(id = task_id).first()
+
+        if task_update is None:
+            return jsonify({"msg": "Something is wrong, try again"}), 400
+        try:
+            task_update.task = body['task']
+            db.session.commit()
+            return jsonify(task_update.serialize()), 202
+        except Exception as error:
+            db.session.rollback()
+            return jsonify(error.args), 500
+
+    if request.method == 'DELETE':
+        body = request.json
+
+        task_delete = ToDo.query.filter_by(id = task_id).first()
+
+        if task_delete is None:
+            return jsonify({"msg": "Something is wrong, try again"}), 400
+
+        db.session.delete(task_delete),
+        try:
+            db.session.commit()
+            return jsonify([]), 204
+        except Exception as error:
+            db.session.rollback()
+            return jsonify(error.args), 500
+>>>>>>> dd9414f83ddc0eba2e3434819e5c422a02b4cc50
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
