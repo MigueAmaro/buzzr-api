@@ -1,3 +1,4 @@
+
 image:
   file: .gitpod.Dockerfile
 ports:
@@ -24,3 +25,7 @@ github:
   prebuilds:
     # enable for the master/default branch (defaults to true)
     main: false
+
+vscode:
+  extensions:
+    - rangav.vscode-thunder-client
