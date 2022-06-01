@@ -355,13 +355,8 @@ def handle_channel():
         return jsonify(error), 500
 
 @socketIo.on("join")
-<<<<<<< HEAD
 def on_join(data):
     join_room(data["channel"])
-=======
-def on_join(channel):
-    join_room(f"holachannel")
->>>>>>> 282aeb031529124e29bc7aae3b8aa177d3156298
 
 @socketIo.on("channel")
 def handle_chat(payload):
