@@ -4,6 +4,7 @@ This module takes care of starting the API Server, Loading the DB and Adding the
 
 
 
+
 from ctypes.wintypes import HLOCAL
 from email import message
 from email.policy import default
@@ -12,6 +13,7 @@ from logging import root
 import os
 import re
 from socket import socket
+
 
 
 from flask import Flask, request, jsonify, url_for
@@ -259,40 +261,40 @@ def handle_private(payload):
     else:
         return None
 
-@socketIo.on("message")
-def handleMessage(msg):
-    user_id = request.args.get("user")
-    user = User.query.filter_by(id = user_id).first()
-    if user is not None:
-        try:
-            mensaje = Messages (
-            msg = msg,
-            username = user.username,
-            date = datetime.datetime.now()
-        )
-            db.session.add(mensaje)
-            db.session.commit()
-            send(msg, broadcast=True)
-        except Exception as error:
-            db.session.rollback()
-            return jsonify(error)
-    return None
+# @socketIo.on("message")
+# def handleMessage(msg):
+#     user_id = request.args.get("user")
+#     user = User.query.filter_by(id = user_id).first()
+#     if user is not None:
+#         try:
+#             mensaje = Messages (
+#             msg = msg,
+#             username = user.username,
+#             date = datetime.datetime.now()
+#         )
+#             db.session.add(mensaje)
+#             db.session.commit()
+#             send(msg, broadcast=True)
+#         except Exception as error:
+#             db.session.rollback()
+#             return jsonify(error)
+#     return None
 
-@app.route('/messages', methods=['GET'])
-@jwt_required()
-def get_messages():
+# @app.route('/messages', methods=['GET'])
+# @jwt_required()
+# def get_messages():
 
-    if request.method == 'GET':
-        messages = Messages.query.all()
-        messages = list(map(
-            lambda message : message.serialize(),
-            messages
-        ))
-        return jsonify(messages),200
-    else:
-        return jsonify({
-            "msg": "Not found messages in this chat room"
-        }), 404 
+#     if request.method == 'GET':
+#         messages = Messages.query.all()
+#         messages = list(map(
+#             lambda message : message.serialize(),
+#             messages
+#         ))
+#         return jsonify(messages),200
+#     else:
+#         return jsonify({
+#             "msg": "Not found messages in this chat room"
+#         }), 404 
 
 
 @app.route('/private/<int:user_to>', methods=['GET'])
@@ -353,15 +355,29 @@ def handle_channel():
         return jsonify(error), 500
 
 @socketIo.on("join")
-def handle_join(channel):
-    user = request.sid
-    join_room(user)
+def on_join(data):
+    join_room(data["channel"])
 
 @socketIo.on("channel")
 def handle_chat(payload):
     msg = payload["msg"]
     room = payload["channel"]
-    emit("mensaje", msg, room = room, broadcast = True)
+    user = payload["username"]
+    channel = Channels.query.filter_by(name = room).first()
+    channel = channel.id
+    try:
+        mensaje = Messages(
+            msg = msg,
+            username = user,
+            date = datetime.datetime.now(),
+            channel_id = channel
+        )
+        db.session.add(mensaje)
+        db.session.commit()
+        emit("mensaje", msg, room = room, broadcast = True)
+    except Exception as error:
+        db.session.rollback()
+        return jsonify(error), 500
 
 @app.route('/channels', methods = ['GET'])
 @jwt_required()
@@ -375,6 +391,23 @@ def handle_channels():
         return jsonify(
             {"msg": "channel not found"}
     ), 404
+
+@app.route('/messages/<string:channelname>', methods = ['GET'])
+@jwt_required()
+def handle_messages(channelname):
+    channel = Channels.query.filter_by(name = channelname).first()
+    if channel is not None:
+        channel = channel.id
+        messages = Messages.query.filter_by(channel_id = channel).all()
+        messages = list(map(
+            lambda message : message.serialize(),
+            messages
+        ))
+        return jsonify(messages)
+    else:
+        return jsonify({
+            "msg":"Not found"
+        }), 404
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
