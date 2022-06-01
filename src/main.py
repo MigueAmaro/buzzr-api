@@ -355,8 +355,13 @@ def handle_channel():
         return jsonify(error), 500
 
 @socketIo.on("join")
+<<<<<<< HEAD
 def on_join(data):
     join_room(data["channel"])
+=======
+def on_join(channel):
+    join_room(f"holachannel")
+>>>>>>> 282aeb031529124e29bc7aae3b8aa177d3156298
 
 @socketIo.on("channel")
 def handle_chat(payload):
@@ -411,5 +416,5 @@ def handle_messages(channelname):
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
-    PORT = int(os.environ.get('PORT', 5000))
+    PORT = int(os.environ.get('PORT', 5500))
     app.run(host='0.0.0.0', port=PORT, debug=False)
