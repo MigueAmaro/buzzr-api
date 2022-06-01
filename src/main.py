@@ -399,7 +399,6 @@ def handle_channels():
             {"msg": "channel not found"}
     ), 404
 
-<<<<<<< HEAD
 @app.route('/messages/<string:channelname>', methods = ['GET'])
 @jwt_required()
 def handle_messages(channelname):
@@ -416,7 +415,6 @@ def handle_messages(channelname):
         return jsonify({
             "msg":"Not found"
         }), 404
-=======
 
 @app.route('/todos', methods=['GET'])
 @app.route('/todos/<int:user_id>', methods=['GET', 'POST'])
@@ -487,7 +485,6 @@ def edit_tasks(user_id = None, task_id = None):
         except Exception as error:
             db.session.rollback()
             return jsonify(error.args), 500
->>>>>>> dd9414f83ddc0eba2e3434819e5c422a02b4cc50
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
