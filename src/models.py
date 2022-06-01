@@ -45,9 +45,8 @@ class Channels(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     
     name = db.Column(db.String(80), nullable = False)
+    user_id = db.Column(db.Integer, nullable = False)
 
-    server = db.relationship("Server")
-    server_id = db.Column(db.Integer, db.ForeignKey("server.id"))
 
     def __repr__(self):
         return '<Channel %r>' % self.name
@@ -56,7 +55,6 @@ class Channels(db.Model):
         return {
             "id": self.id,
             "name": self.name,
-            "server": self.server_id
         }
 
 class Messages(db.Model):
@@ -65,6 +63,8 @@ class Messages(db.Model):
     msg = db.Column(db.Text, nullable = False)
     username = db.Column(db.String(50))
     date = db.Column(db.DateTime, nullable=False)
+    channel = db.relationship("Channels")
+    channel_id = db.Column(db.Integer, db.ForeignKey("channels.id"))
     
     def __repr__(self):
         return '<Msg %r>' % self.msg
@@ -74,5 +74,29 @@ class Messages(db.Model):
             "id": self.id,
             "msg": self.msg,
             "username": self.username,
+            "date": self.date
+        }
+
+class PrivateMessages(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+
+    msg = db.Column(db.Text, nullable = False)
+    user_from = db.Column(db.String(1000), nullable=False)
+    username_from = db.Column(db.String(80), nullable=False)
+    user_to = db.Column(db.String(1000), nullable=False)
+    username_to = db.Column(db.String(80), nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
+    
+    def __repr__(self):
+        return '<Msg %r>' % self.msg
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "msg": self.msg,
+            "user_from": self.user_from,
+            "username_from": self.username_from,
+            "user_to": self.user_to,
+            "username_to": self.username_from,
             "date": self.date
         }

@@ -2,12 +2,20 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 
+
+
+
+from ctypes.wintypes import HLOCAL
 from email import message
 from email.policy import default
 from hashlib import new
+from logging import root
 import os
 import re
 from socket import socket
+
+
+
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
 from flask_swagger import swagger
@@ -15,8 +23,8 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from models import db, User, Messages
-from flask_socketio import SocketIO, send, emit, join_room, close_room
+from models import Channels, db, User, Messages, PrivateMessages
+from flask_socketio import SocketIO, send, emit, join_room, leave_room
 from flask_socketio import SocketIO, send
 import datetime
 
@@ -43,14 +51,6 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/user', methods=['GET'])
-def handle_hello():
-
-    response_body = {
-        "msg": "Hello, this is your GET /user response "
-    }
-
-    return jsonify(response_body), 200
 
 # Sign_up route
 @app.route('/signup', methods = ['POST'])
@@ -126,6 +126,24 @@ def handle_login():
 
 
 # Users profile
+@app.route('/user', methods=['GET'])
+@jwt_required()
+def handle_all_users():
+
+    users = User.query.all()
+    if users is not None:
+        users = list(map(
+            lambda user : user.serialize(),
+            users
+        ))
+        return jsonify(users), 200
+    else:
+        return jsonify({
+            "msg": "Users not found"
+        }), 404
+
+
+
 @app.route('/user/<int:user_id>', methods=['GET', 'PUT'])
 @jwt_required()
 def handle_user(user_id = None):
@@ -157,7 +175,7 @@ def handle_user(user_id = None):
             return jsonify({
                 "msg": "User not found"
             }), 404
-        
+            
         try:
             user_update.email = body["email"]
             user_update.first_name = body["first_name"]
@@ -201,9 +219,7 @@ def handle_connect(id):
     if user_id is None:
         return print("NO EXISTE")
     else:
-        print("HOLAAAAA",user_id)
         user[id] = request.sid
-        print(user)
 
 
 # @socketIo.on('disconnect')
@@ -214,59 +230,191 @@ def handle_connect(id):
 
 @socketIo.on("private_message")
 def handle_private(payload):
-    user1 = User.query.filter_by(username = payload["username"]).first()
-    if user1 is not None:
-        user1 = user1.serialize()
-        print(user1['id'])
+    user_to = User.query.filter_by(username = payload["username"]).first()
+    user_from = User.query.filter_by(id = payload['id']).first()
 
-        variable = str(user1['id'])
+    if user_to is not None and user_from is not None:
+        user_to = user_to.serialize()
+        user_from = user_from.serialize()
 
-        print(user[variable])
-        # print(user)
-        # print(user.user1.id)
-        user2 = user[variable]
-    print(user)
-    msg = payload['msg']
-    print(msg)
-    emit("new_private_msg", msg, room = user2)
+        user_to_id = str(user_to['id'])
+        user_from_id = str(user_from['id'])
 
-@socketIo.on("message")
-def handleMessage(msg):
-    user_id = request.args.get("user")
-    user = User.query.filter_by(id = user_id).first()
-    if user is not None:
+        user2 = user[user_to_id]
+        msg = payload['msg']
+
         try:
-            mensaje = Messages (
-            msg = msg,
-            username = user.username,
-            date = datetime.datetime.now()
-        )
-            db.session.add(mensaje)
+            private_message = PrivateMessages (
+                msg = msg,
+                user_to = user_to_id,
+                username_to = user_to['username'],
+                user_from = user_from_id,
+                username_from = user_from['username'],
+                date = datetime.datetime.now()
+            )
+            db.session.add(private_message)
             db.session.commit()
-            send(msg, broadcast=True)
+            emit("new_private_msg", msg, room = user2)
         except Exception as error:
             db.session.rollback()
             return jsonify(error)
-    return None
+    else:
+        return None
 
-@app.route('/messages', methods=['GET'])
+# @socketIo.on("message")
+# def handleMessage(msg):
+#     user_id = request.args.get("user")
+#     user = User.query.filter_by(id = user_id).first()
+#     if user is not None:
+#         try:
+#             mensaje = Messages (
+#             msg = msg,
+#             username = user.username,
+#             date = datetime.datetime.now()
+#         )
+#             db.session.add(mensaje)
+#             db.session.commit()
+#             send(msg, broadcast=True)
+#         except Exception as error:
+#             db.session.rollback()
+#             return jsonify(error)
+#     return None
+
+# @app.route('/messages', methods=['GET'])
+# @jwt_required()
+# def get_messages():
+
+#     if request.method == 'GET':
+#         messages = Messages.query.all()
+#         messages = list(map(
+#             lambda message : message.serialize(),
+#             messages
+#         ))
+#         return jsonify(messages),200
+#     else:
+#         return jsonify({
+#             "msg": "Not found messages in this chat room"
+#         }), 404 
+
+
+@app.route('/private/<int:user_to>', methods=['GET'])
 @jwt_required()
-def get_messages():
+def get_private_messages(user_to = None):
+
+    user_id = get_jwt_identity()
 
     if request.method == 'GET':
-        messages = Messages.query.all()
+        if user_to is not None:
+            
+            messages = PrivateMessages.query.filter_by(user_from = user_id, user_to = user_to).all()
+            messages = list(map(
+                lambda message : message.serialize(),
+                messages
+            ))
+            print(messages)
+            return jsonify(messages)
+        else:
+            return jsonify({
+                "msg": "U dont have messages here"
+            }), 404
+
+# @socketIo.on("create_channel")
+# def handle_channel(payload):
+#     user = payload["id"]
+#     room = payload["name"]
+#     try:
+#         channel = Channels(
+#             name = room,
+#             user_id = user
+#         )
+#         db.session.add(channel)
+#         db.session.commit()
+#         # join_room(room)
+#         return emit(user + "has entered the room", to = room)
+#     except Exception as error:
+#         db.session.rollback()
+#         return jsonify(error)
+
+@app.route('/createchannel', methods = ['POST'])
+@jwt_required()
+def handle_channel():
+    user = get_jwt_identity()
+    room = request.json.get("channel")
+    try:
+        channel = Channels(
+            name = room,
+            user_id = user
+        )
+        db.session.add(channel)
+        db.session.commit()
+        return jsonify({
+            "msg": "channel created"
+        }), 201
+    except Exception as error:
+        db.session.rollback()
+        return jsonify(error), 500
+
+@socketIo.on("join")
+<<<<<<< HEAD
+def on_join(data):
+    join_room(data["channel"])
+=======
+def on_join(channel):
+    join_room(f"holachannel")
+>>>>>>> 282aeb031529124e29bc7aae3b8aa177d3156298
+
+@socketIo.on("channel")
+def handle_chat(payload):
+    msg = payload["msg"]
+    room = payload["channel"]
+    user = payload["username"]
+    channel = Channels.query.filter_by(name = room).first()
+    channel = channel.id
+    try:
+        mensaje = Messages(
+            msg = msg,
+            username = user,
+            date = datetime.datetime.now(),
+            channel_id = channel
+        )
+        db.session.add(mensaje)
+        db.session.commit()
+        emit("mensaje", msg, room = room, broadcast = True)
+    except Exception as error:
+        db.session.rollback()
+        return jsonify(error), 500
+
+@app.route('/channels', methods = ['GET'])
+@jwt_required()
+def handle_channels():
+    user = get_jwt_identity()
+    user_channels = Channels.query.filter_by(user_id = user).all()
+    if user_channels is not None:
+        user_channels = list(map(lambda channels : channels.serialize(), user_channels))
+        return jsonify(user_channels)
+    else: 
+        return jsonify(
+            {"msg": "channel not found"}
+    ), 404
+
+@app.route('/messages/<string:channelname>', methods = ['GET'])
+@jwt_required()
+def handle_messages(channelname):
+    channel = Channels.query.filter_by(name = channelname).first()
+    if channel is not None:
+        channel = channel.id
+        messages = Messages.query.filter_by(channel_id = channel).all()
         messages = list(map(
             lambda message : message.serialize(),
             messages
         ))
-        return jsonify(messages),200
+        return jsonify(messages)
     else:
         return jsonify({
-            "msg": "Not found messages in this chat room"
-        }), 404 
-
+            "msg":"Not found"
+        }), 404
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
-    PORT = int(os.environ.get('PORT', 5000))
+    PORT = int(os.environ.get('PORT', 5500))
     app.run(host='0.0.0.0', port=PORT, debug=False)
