@@ -257,7 +257,7 @@ def handle_private(payload):
             emit("new_private_msg", msg, room = user2)
         except Exception as error:
             db.session.rollback()
-            return jsonify(error)
+            return jsonify(error.args)
     else:
         return None
 
@@ -359,7 +359,7 @@ def handle_channel():
         }), 201
     except Exception as error:
         db.session.rollback()
-        return jsonify(error), 500
+        return jsonify(error.args), 500
 
 @socketIo.on("join")
 def on_join(data):
@@ -384,7 +384,7 @@ def handle_chat(payload):
         emit("mensaje", msg, room = room, broadcast = True)
     except Exception as error:
         db.session.rollback()
-        return jsonify(error), 500
+        return jsonify(error.args), 500
 
 @app.route('/channels', methods = ['GET'])
 @jwt_required()
@@ -447,7 +447,7 @@ def handle_todos(user_id = None):
             return jsonify(task.serialize()), 201
         except Exception as error:
             db.session.rollback()
-            return jsonify({error.args}), 500
+            return jsonify(error.args), 500
 
 @app.route('/todos/<int:user_id>/<int:task_id>', methods=['PUT', 'DELETE'])
 def edit_tasks(user_id = None, task_id = None):
