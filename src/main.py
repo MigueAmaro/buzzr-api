@@ -486,6 +486,32 @@ def edit_tasks(user_id = None, task_id = None):
             db.session.rollback()
             return jsonify(error.args), 500
 
+@app.route('/user/<string:channelname>', methods=['GET'])
+def handle_user_channel(channelname):
+
+    if channelname is None:
+        return jsonify({"msg": "Channel not found"}), 404
+    
+    channels = Channels.query.filter_by(name = channelname).all()
+    channels = list(map(
+        lambda channel : channel.serialize(),
+        channels
+    ))
+
+    users = []
+
+    for i in range(len(channels)):
+        user_id = str(channels[i]["user_id"])
+        users.append(int(user_id))
+
+    users_in_chat = []
+
+    for j in range(len(users)):
+        user = User.query.filter_by(id = users[j]).first()
+        users_in_chat.append(user.serialize())
+
+    return jsonify(users_in_chat)
+
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', 5500))
