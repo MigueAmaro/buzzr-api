@@ -257,7 +257,7 @@ def handle_private(payload):
             emit("new_private_msg", msg, room = user2)
         except Exception as error:
             db.session.rollback()
-            return jsonify(error)
+            return jsonify(error.args)
     else:
         return None
 
@@ -359,7 +359,7 @@ def handle_channel():
         }), 201
     except Exception as error:
         db.session.rollback()
-        return jsonify(error), 500
+        return jsonify(error.args), 500
 
 @socketIo.on("join")
 def on_join(data):
@@ -384,7 +384,7 @@ def handle_chat(payload):
         emit("mensaje", msg, room = room, broadcast = True)
     except Exception as error:
         db.session.rollback()
-        return jsonify(error), 500
+        return jsonify(error.args), 500
 
 @app.route('/channels', methods = ['GET'])
 @jwt_required()
@@ -447,7 +447,7 @@ def handle_todos(user_id = None):
             return jsonify(task.serialize()), 201
         except Exception as error:
             db.session.rollback()
-            return jsonify({error.args}), 500
+            return jsonify(error.args), 500
 
 @app.route('/todos/<int:user_id>/<int:task_id>', methods=['PUT', 'DELETE'])
 def edit_tasks(user_id = None, task_id = None):
@@ -485,6 +485,32 @@ def edit_tasks(user_id = None, task_id = None):
         except Exception as error:
             db.session.rollback()
             return jsonify(error.args), 500
+
+@app.route('/user/<string:channelname>', methods=['GET'])
+def handle_user_channel(channelname):
+
+    if channelname is None:
+        return jsonify({"msg": "Channel not found"}), 404
+    
+    channels = Channels.query.filter_by(name = channelname).all()
+    channels = list(map(
+        lambda channel : channel.serialize(),
+        channels
+    ))
+
+    users = []
+
+    for i in range(len(channels)):
+        user_id = str(channels[i]["user_id"])
+        users.append(int(user_id))
+
+    users_in_chat = []
+
+    for j in range(len(users)):
+        user = User.query.filter_by(id = users[j]).first()
+        users_in_chat.append(user.serialize())
+
+    return jsonify(users_in_chat)
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':

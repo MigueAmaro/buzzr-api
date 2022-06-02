@@ -55,6 +55,7 @@ class Channels(db.Model):
         return {
             "id": self.id,
             "name": self.name,
+            "user_id": self.user_id
         }
 
 class Messages(db.Model):
