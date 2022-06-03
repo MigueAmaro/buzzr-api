@@ -230,6 +230,7 @@ def handle_connect(id):
 
 @socketIo.on("private_message")
 def handle_private(payload):
+    print(payload)
     user_to = User.query.filter_by(username = payload["username"]).first()
     user_from = User.query.filter_by(id = payload['id']).first()
 
@@ -240,6 +241,7 @@ def handle_private(payload):
         user_to_id = str(user_to['id'])
         user_from_id = str(user_from['id'])
 
+        print(user)
         user2 = user[user_to_id]
         msg = payload['msg']
 
@@ -297,18 +299,18 @@ def handle_private(payload):
 #         }), 404 
 
 
-@app.route('/private/<int:user_to>', methods=['GET'])
+@app.route('/private/<string:username_to>', methods=['GET'])
 @jwt_required()
-def get_private_messages(user_to = None):
+def get_private_messages(username_to = None):
 
     user_id = get_jwt_identity()
 
     if request.method == 'GET':
-        if user_to is not None:
+        if username_to is not None:
             messages = []
 
-            messages_from = PrivateMessages.query.filter_by(user_from = user_id, user_to = user_to).all()
-            messages_to = PrivateMessages.query.filter_by(user_from = user_to, user_to = user_id).all()
+            messages_from = PrivateMessages.query.filter_by(user_from = user_id, username_to = username_to).all()
+            messages_to = PrivateMessages.query.filter_by(username_from = username_to, user_to = user_id).all()
 
             messages_from = list(map(
                 lambda msg : messages.append(msg.serialize()),
