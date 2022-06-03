@@ -85,6 +85,19 @@ def sign_up():
                     )
                     db.session.add(new_user)
                     db.session.commit()
+                    try:
+                        new_user = User.query.filter_by(email = email).first()
+                        new_user = new_user.serialize()
+                        welcome_channel = Channels(
+                            name = "Welcome",
+                            user_id = str(new_user['id'])
+                        )
+                        db.session.add(welcome_channel)
+                        db.session.commit()
+                        return jsonify({"msg": "Welcome channel creado"}), 201
+                    except Exception as error:
+                        db.session.rollback()
+                        return jsonify(error.args)
                     return jsonify({
                         "msg": "Usuario creado"
                     }), 201

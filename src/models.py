@@ -46,7 +46,13 @@ class Channels(db.Model):
     
     name = db.Column(db.String(80), nullable = False)
     user_id = db.Column(db.Integer, nullable = False)
-
+    user = db.relationship('User')
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    __table_args__ = (db.UniqueConstraint(
+    'name',
+    'user_id',
+    name="dont_repeat_channels"
+    ),)
 
     def __repr__(self):
         return '<Channel %r>' % self.name
